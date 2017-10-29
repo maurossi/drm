@@ -21,7 +21,6 @@
 # IN THE SOFTWARE.
 #
 
-ifeq ($(LIBDRM_VER),intel)
 LIBDRM_COMMON_MK := $(call my-dir)/Android.common.mk
 
 LOCAL_PATH := $(call my-dir)
@@ -73,4 +72,3 @@ include $(LIBDRM_COMMON_MK)
 include $(BUILD_SHARED_LIBRARY)
 
 include $(call all-makefiles-under,$(LOCAL_PATH))
-endif

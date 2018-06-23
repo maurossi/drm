@@ -29,6 +29,8 @@
 #include <cutils/native_handle.h>
 #include <stdint.h>
 
+#include <drm/drm_fourcc.h>
+
 /* support users of drm_gralloc/gbm_gralloc */
 #define gralloc_gbm_handle_t gralloc_handle_t
 #define gralloc_drm_handle_t gralloc_handle_t
@@ -106,6 +108,75 @@ static inline native_handle_t *gralloc_handle_create(int32_t width,
 	handle->prime_fd = -1;
 
 	return nhandle;
+}
+
+static inline uint32_t gralloc_handle_get_fourcc_format(buffer_handle_t _handle)
+{
+	struct gralloc_handle_t *handle = gralloc_handle(_handle);
+
+	switch (handle->format) {
+		case HAL_PIXEL_FORMAT_RGB_888:
+			return DRM_FORMAT_BGR888;
+		case HAL_PIXEL_FORMAT_BGRA_8888:
+			return DRM_FORMAT_ARGB8888;
+		case HAL_PIXEL_FORMAT_RGBX_8888:
+			return DRM_FORMAT_XBGR8888;
+		case HAL_PIXEL_FORMAT_RGBA_8888:
+			return DRM_FORMAT_ABGR8888;
+		case HAL_PIXEL_FORMAT_RGB_565:
+			return DRM_FORMAT_BGR565;
+		case HAL_PIXEL_FORMAT_YV12:
+			return DRM_FORMAT_YVU420;
+		default:
+			ALOGE("Cannot convert hal format to drm format %u", handle->format);
+			return -EINVAL;
+	}
+}
+
+static inline int gralloc_handle_get_fd(buffer_handle_t _handle, int plane)
+{
+	struct gralloc_handle_t *handle = gralloc_handle(_handle);
+
+	if (plane != 0)
+		return -1;
+
+	return handle->prime_fd;
+}
+
+static inline int gralloc_handle_set_fd(buffer_handle_t _handle, int plane, int fd)
+{
+	struct gralloc_handle_t *handle = gralloc_handle(_handle);
+
+	if (plane != 0)
+		return -1;
+
+	handle->prime_fd = fd;
+	return 0;
+}
+
+static inline void gralloc_handle_get_buffer_dim(buffer_handle_t _handle, uint32_t *width, uint32_t *height)
+{
+	struct gralloc_handle_t *handle = gralloc_handle(_handle);
+
+	*width = handle->width;
+	*height = handle->height;
+}
+
+static inline uint32_t gralloc_handle_get_usage(buffer_handle_t _handle)
+{
+	struct gralloc_handle_t *handle = gralloc_handle(_handle);
+
+	return handle->usage;
+}
+
+static inline uint32_t gralloc_handle_get_stride(buffer_handle_t _handle, int plane)
+{
+	struct gralloc_handle_t *handle = gralloc_handle(_handle);
+
+	if (plane != 0)
+		return 0;
+
+	return handle->stride;
 }
 
 #endif

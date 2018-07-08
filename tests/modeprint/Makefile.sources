@@ -1,0 +1,2 @@
+MODEPRINT_FILES := \
+	modeprint.c

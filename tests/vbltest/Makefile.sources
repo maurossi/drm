@@ -1,0 +1,2 @@
+VBLTEST_FILES := \
+	vbltest.c

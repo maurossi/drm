@@ -53,6 +53,7 @@ cc_defaults {
 cc_library {
     name: "libdrm",
     recovery_available: true,
+    host_supported: true,
     vendor_available: true,
     defaults: [
         "libdrm_defaults",

@@ -197,3 +197,5 @@ drmUnmap
 drmUnmapBufs
 drmUpdateDrawableInfo
 drmWaitVBlank
+drmGetFormatModifierName
+drmGetFormatModifierVendor

@@ -162,7 +162,7 @@ static void fill_smpte_yuv_planar(const struct util_yuv_info *yuv,
 				  unsigned int height, unsigned int stride)
 {
 	const struct color_yuv colors_top[] = {
-		MAKE_YUV_601(191, 192, 192),	/* grey */
+		MAKE_YUV_601(192, 192, 192),	/* grey */
 		MAKE_YUV_601(192, 192, 0),	/* yellow */
 		MAKE_YUV_601(0, 192, 192),	/* cyan */
 		MAKE_YUV_601(0, 192, 0),	/* green */
@@ -265,7 +265,7 @@ static void fill_smpte_yuv_packed(const struct util_yuv_info *yuv, void *mem,
 				  unsigned int stride)
 {
 	const struct color_yuv colors_top[] = {
-		MAKE_YUV_601(191, 192, 192),	/* grey */
+		MAKE_YUV_601(192, 192, 192),	/* grey */
 		MAKE_YUV_601(192, 192, 0),	/* yellow */
 		MAKE_YUV_601(0, 192, 192),	/* cyan */
 		MAKE_YUV_601(0, 192, 0),	/* green */
@@ -698,6 +698,8 @@ static void fill_smpte(const struct util_format_info *info, void *planes[3],
 	case DRM_FORMAT_NV21:
 	case DRM_FORMAT_NV16:
 	case DRM_FORMAT_NV61:
+	case DRM_FORMAT_NV24:
+	case DRM_FORMAT_NV42:
 		u = info->yuv.order & YUV_YCbCr ? planes[1] : planes[1] + 1;
 		v = info->yuv.order & YUV_YCrCb ? planes[1] : planes[1] + 1;
 		return fill_smpte_yuv_planar(&info->yuv, planes[0], u, v,
@@ -763,11 +765,6 @@ static void fill_smpte(const struct util_format_info *info, void *planes[3],
 					  width, height, stride);
 	}
 }
-
-/* swap these for big endian.. */
-#define RED   2
-#define GREEN 1
-#define BLUE  0
 
 static void make_pwetty(void *data, unsigned int width, unsigned int height,
 			unsigned int stride, uint32_t format)
@@ -1023,6 +1020,8 @@ static void fill_tiles(const struct util_format_info *info, void *planes[3],
 	case DRM_FORMAT_NV21:
 	case DRM_FORMAT_NV16:
 	case DRM_FORMAT_NV61:
+	case DRM_FORMAT_NV24:
+	case DRM_FORMAT_NV42:
 		u = info->yuv.order & YUV_YCbCr ? planes[1] : planes[1] + 1;
 		v = info->yuv.order & YUV_YCrCb ? planes[1] : planes[1] + 1;
 		return fill_tiles_yuv_planar(info, planes[0], u, v,

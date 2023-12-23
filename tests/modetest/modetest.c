@@ -817,7 +817,7 @@ struct pipe_arg {
 	unsigned int num_cons;
 	uint32_t crtc_id;
 	char mode_str[64];
-	char format_str[5];
+	char format_str[8]; /* need to leave room for "_BE" and terminating \0 */
 	float vrefresh;
 	unsigned int fourcc;
 	drmModeModeInfo *mode;
@@ -841,7 +841,7 @@ struct plane_arg {
 	unsigned int old_fb_id;
 	struct bo *bo;
 	struct bo *old_bo;
-	char format_str[5]; /* need to leave room for terminating \0 */
+	char format_str[8]; /* need to leave room for "_BE" and terminating \0 */
 	unsigned int fourcc;
 };
 
@@ -1149,13 +1149,16 @@ static bool add_property_optional(struct device *dev, uint32_t obj_id,
 static void set_gamma(struct device *dev, unsigned crtc_id, unsigned fourcc)
 {
 	unsigned blob_id = 0;
+	const struct util_format_info *info;
 	/* TODO: support 1024-sized LUTs, when the use-case arises */
 	struct drm_color_lut gamma_lut[256];
 	int i, ret;
 
-	if (fourcc == DRM_FORMAT_C8) {
-		/* TODO: Add C8 support for more patterns */
-		util_smpte_c8_gamma(256, gamma_lut);
+	info = util_format_info_find(fourcc);
+	if (info->ncolors) {
+		memset(gamma_lut, 0, sizeof(gamma_lut));
+		/* TODO: Add index support for more patterns */
+		util_smpte_fill_lut(info->ncolors, gamma_lut);
 		drmModeCreatePropertyBlob(dev->fd, gamma_lut, sizeof(gamma_lut), &blob_id);
 	} else {
 		/*
@@ -2029,8 +2032,9 @@ static int parse_connector(struct pipe_arg *pipe, const char *arg)
 	}
 
 	if (*p == '@') {
-		strncpy(pipe->format_str, p + 1, 4);
-		pipe->format_str[4] = '\0';
+		len = sizeof(pipe->format_str) - 1;
+		strncpy(pipe->format_str, p + 1, len);
+		pipe->format_str[len] = '\0';
 	}
 
 	pipe->fourcc = util_format_fourcc(pipe->format_str);
@@ -2044,6 +2048,7 @@ static int parse_connector(struct pipe_arg *pipe, const char *arg)
 
 static int parse_plane(struct plane_arg *plane, const char *p)
 {
+	unsigned int len;
 	char *end;
 
 	plane->plane_id = strtoul(p, &end, 10);
@@ -2082,8 +2087,9 @@ static int parse_plane(struct plane_arg *plane, const char *p)
 	}
 
 	if (*end == '@') {
-		strncpy(plane->format_str, end + 1, 4);
-		plane->format_str[4] = '\0';
+		len = sizeof(plane->format_str) - 1;
+		strncpy(plane->format_str, end + 1, len);
+		plane->format_str[len] = '\0';
 	} else {
 		strcpy(plane->format_str, "XR24");
 	}
@@ -2131,13 +2137,16 @@ static void usage(char *name)
 	fprintf(stderr, "\t-p\tlist CRTCs and planes (pipes)\n");
 
 	fprintf(stderr, "\n Test options:\n\n");
-	fprintf(stderr, "\t-P <plane_id>@<crtc_id>:<w>x<h>[+<x>+<y>][*<scale>][@<format>]\tset a plane\n");
-	fprintf(stderr, "\t-s <connector_id>[,<connector_id>][@<crtc_id>]:[#<mode index>]<mode>[-<vrefresh>][@<format>]\tset a mode\n");
-	fprintf(stderr, "\t\tcustom mode can be specified as <hdisplay>,<hsyncstart>,<hsyncend>,<htotal>,<vdisplay>,<vsyncstart>,<vsyncend>,<vtotal>\n");
+	fprintf(stderr, "\t-P <plane_id>@<crtc_id>:<w>x<h>[+<x>+<y>][*<scale>][@<format>]\tset a plane, see 'plane-topology'\n");
+	fprintf(stderr, "\t-s <connector_id>[,<connector_id>][@<crtc_id>]:mode[@<format>]\tset a mode, see 'mode-topology'\n");
+	fprintf(stderr, "\t\twhere mode can be specified as:\n");
+	fprintf(stderr, "\t\t<hdisp>x<vdisp>[-<vrefresh>]\n");
+	fprintf(stderr, "\t\t<hdisp>,<hss>,<hse>,<htot>,<vdisp>,<vss>,<vse>,<vtot>-<vrefresh>\n");
+	fprintf(stderr, "\t\t#<mode index>\n");
 	fprintf(stderr, "\t-C\ttest hw cursor\n");
 	fprintf(stderr, "\t-v\ttest vsynced page flipping\n");
 	fprintf(stderr, "\t-r\tset the preferred mode for all connectors\n");
-	fprintf(stderr, "\t-w <obj_id>:<prop_name>:<value>\tset property\n");
+	fprintf(stderr, "\t-w <obj_id>:<prop_name>:<value>\tset property, see 'property'\n");
 	fprintf(stderr, "\t-a \tuse atomic API\n");
 	fprintf(stderr, "\t-F pattern1,pattern2\tspecify fill patterns\n");
 	fprintf(stderr, "\t-o <desired file path> \t Dump writeback output buffer to file\n");
@@ -2148,6 +2157,25 @@ static void usage(char *name)
 	fprintf(stderr, "\t-D device\tuse the given device\n");
 
 	fprintf(stderr, "\n\tDefault is to dump all info.\n");
+
+	fprintf(stderr, "\n");
+	fprintf(stderr, "Plane Topology is defined as:\n");
+	fprintf(stderr, "\tplane-topology\t::= plane-id '@' crtc-id ':' width 'x' height ( <plane-offsets> )? ;\n");
+	fprintf(stderr, "\tplane-offsets\t::= '+' x-offset '+' y-offset ( <plane-scale> )? ;\n");
+	fprintf(stderr, "\tplane-scale\t::= '*' scale ( <plane-format> )? ;\n");
+	fprintf(stderr, "\tplane-format\t::= '@' format ;\n");
+
+	fprintf(stderr, "\n");
+	fprintf(stderr, "Mode Topology is defined as:\n");
+	fprintf(stderr, "\tmode-topology\t::= connector-id ( ',' connector-id )* ( '@' crtc-id )? ':' <mode-selection> ( '@' format )? ;\n");
+	fprintf(stderr, "\tmode-selection\t::=  <indexed-mode> | <named-mode> | <custom-mode> ;\n");
+	fprintf(stderr, "\tindexed-mode\t::=  '#' mode-index ;\n");
+	fprintf(stderr, "\tnamed-mode\t::=  width 'x' height ( '-' vrefresh )? ;\n");
+	fprintf(stderr, "\tcustom-mode\t::=  hdisplay ',' hsyncstart ',' hsyncend ',' htotal ',' vdisplay ',' vsyncstart ',' vsyncend ',' vtotal '-' vrefresh ;\n");
+
+	fprintf(stderr, "\n");
+	fprintf(stderr, "Property is defined as:\n");
+	fprintf(stderr, "\tproperty\t::= object-id ':' property-name ':' value ;\n");
 	exit(0);
 }
 

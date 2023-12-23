@@ -21,7 +21,7 @@
 project(
   'libdrm',
   ['c'],
-  version : '2.4.117',
+  version : '2.4.118',
   license : 'MIT',
   meson_version : '>= 0.59',
   default_options : ['buildtype=debugoptimized', 'c_std=c11'],
@@ -87,7 +87,7 @@ dep_pciaccess = dependency('pciaccess', version : '>= 0.10', required : get_opti
 with_intel = get_option('intel') \
   .require(with_atomics, error_message : 'libdrm_intel requires atomics') \
   .require(dep_pciaccess.found(), error_message : 'libdrm_intel requires libpciaccess') \
-  .disable_auto_if(not host_machine.system().startswith('x86')) \
+  .disable_auto_if(not host_machine.cpu_family().startswith('x86')) \
   .allowed()
 summary('Intel', with_intel)
 
@@ -226,6 +226,11 @@ if with_freedreno_kgsl and not with_freedreno
   error('cannot enable freedreno-kgsl without freedreno support')
 endif
 config.set10('_GNU_SOURCE', true)
+
+if target_machine.endian() == 'big'
+  config.set('HAVE_BIG_ENDIAN', 1)
+endif
+
 config_file = configure_file(
   configuration : config,
   output : 'config.h',

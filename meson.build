@@ -21,7 +21,7 @@
 project(
   'libdrm',
   ['c'],
-  version : '2.4.120',
+  version : '2.4.121',
   license : 'MIT',
   meson_version : '>= 0.59',
   default_options : ['buildtype=debugoptimized', 'c_std=c11'],
@@ -235,7 +235,7 @@ config_file = configure_file(
   configuration : config,
   output : 'config.h',
 )
-add_project_arguments('-include', '@0@'.format(config_file), language : 'c')
+add_project_arguments('-include', meson.current_build_dir() / 'config.h', language : 'c')
 
 inc_root = include_directories('.')
 inc_drm = include_directories('include/drm')

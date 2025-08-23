@@ -67,6 +67,7 @@ static inline uint16_t swap16(uint16_t x)
 	return ((x & 0x00ffU) << 8) | ((x & 0xff00U) >> 8);
 }
 
+#ifdef HAVE_BIG_ENDIAN
 static inline uint32_t swap32(uint32_t x)
 {
 	return ((x & 0x000000ffU) << 24) |
@@ -74,8 +75,6 @@ static inline uint32_t swap32(uint32_t x)
 	       ((x & 0x00ff0000U) >>  8) |
 	       ((x & 0xff000000U) >> 24);
 }
-
-#ifdef HAVE_BIG_ENDIAN
 #define cpu_to_be16(x)			(x)
 #define cpu_to_le16(x)			swap16(x)
 #define cpu_to_le32(x)			swap32(x)

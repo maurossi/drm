@@ -41,6 +41,7 @@ cc_defaults {
         "-Wno-int-conversion",
         "-Wno-missing-field-initializers",
         "-Wno-pointer-arith",
+        "-Wno-unused-function",
         "-Wno-unused-parameter",
         "-Wno-unused-variable",
     ],
